@@ -1,10 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"github.com/tylerb/graceful"
+
 	"io"
+	"log"
+	"net"
 	"net/http"
 	"os"
+	"time"
 )
 
 const form = `<form action="/up" enctype="multipart/form-data" method="post"><input type="file" name="f" multiple><input type="submit"></form>`
@@ -45,9 +49,18 @@ func main() {
 				return
 			}
 		}
-
-		fmt.Fprintln(w, "Ok")
 	})
 
-	http.ListenAndServe(":http-alt", nil)
+	l, err := net.Listen("unix", "/var/run/uploader.socket")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	server := graceful.Server{
+		Timeout: 1 * time.Minute,
+		Server:  &http.Server{},
+	}
+
+	log.Println(server.Serve(l))
+	l.Close()
 }
